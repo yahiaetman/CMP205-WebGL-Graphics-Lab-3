@@ -1,5 +1,7 @@
 # WebGL Lab 3
 
+# WARNING: LAB UNDER CONSTRUCTION
+
 ## Steps to run
 
 1. Install [Node.js](https://nodejs.org/en/) and [Visual Studio Code](https://code.visualstudio.com/).
