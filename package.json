@@ -5,7 +5,7 @@
   "main": "index.html",
   "scripts": {
     "watch": "parcel index.html",
-    "build": "parcel build index.html"
+    "build": "parcel build index.html --no-source-maps --no-content-hash --public-url ."
   },
   "staticFiles": {
     "staticPath": "static",

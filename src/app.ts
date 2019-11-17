@@ -20,7 +20,7 @@ const scenes = {
     "Cubemap": CubemapScene,
     "Blending": BlendingScene
 };
-const initialScene = "Blending";
+const initialScene = "Texture";
 
 // Then we add those scenes to the game object and ask it to start the initial scene
 game.addScenes(scenes);
