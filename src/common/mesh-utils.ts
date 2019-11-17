@@ -248,7 +248,7 @@ export function LoadOBJMesh(gl: WebGL2RenderingContext, data: string){
     let obj = new OBJ.Mesh(data);
     let mesh = createEmptyMesh(gl);
     mesh.setBufferData("positions", new Float32Array(obj.vertices), gl.STATIC_DRAW);
-    mesh.setBufferData("texcoords", new Float32Array(obj.textures), gl.STATIC_DRAW);
+    mesh.setBufferData("texcoords", new Float32Array(obj.textures.map((v,i)=>i%2==0?v:-v)), gl.STATIC_DRAW);
     mesh.setBufferData("normals", new Float32Array(obj.vertexNormals), gl.STATIC_DRAW);
     let colors = new Uint8Array(obj.vertices.length * 4 / 3);
     colors.fill(255);
