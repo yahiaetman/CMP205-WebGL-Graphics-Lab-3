@@ -10,5 +10,5 @@ uniform vec4 tint;
 
 
 void main(){
-    color = texture(cube_texture_sampler, normalize(v_view)) * tint;
+    color = texture(cube_texture_sampler, normalize(v_view)) * tint; // Sample the cube texture from the viewing direction
 }

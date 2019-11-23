@@ -8,7 +8,7 @@ import { vec3, mat4 } from 'gl-matrix';
 import { Vector, Selector } from '../common/dom-utils';
 import { createElement, StatelessProps, StatelessComponent } from 'tsx-create-element';
 
-// In this scene we will draw one rectangle with a texture
+// In this scene we will draw one large subdivided rectangle and use a texture to convert it into a terrain.
 export default class TerrianScene extends Scene {
     program: ShaderProgram;
     camera: Camera;
@@ -18,7 +18,6 @@ export default class TerrianScene extends Scene {
     samplers: {[name: string]: WebGLSampler} = {};
 
     public load(): void {
-        // These shaders take 2 uniform: MVP for 3D transformation and Tint for modifying colors
         this.game.loader.load({
             ["terrain.vert"]:{url:'shaders/terrain.vert', type:'text'},
             ["terrain.frag"]:{url:'shaders/terrain.frag', type:'text'},
@@ -36,6 +35,7 @@ export default class TerrianScene extends Scene {
 
         this.meshes['ground'] = MeshUtils.SubdividedPlane(this.gl, [1024, 1024]);
         
+        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
         
         this.textures['terrain'] = this.gl.createTexture();
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures['terrain']);
@@ -55,7 +55,7 @@ export default class TerrianScene extends Scene {
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.game.loader.resources['mountain-texture']);
         this.gl.generateMipmap(this.gl.TEXTURE_2D);
 
-
+        // We create separate sampler for the height map since we need CLAMP_TO_EDGE to prevent some filtering artifacts at the terrain edges
         this.samplers['height'] = this.gl.createSampler();
         this.gl.samplerParameteri(this.samplers['height'], this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
         this.gl.samplerParameteri(this.samplers['height'], this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
@@ -107,6 +107,7 @@ export default class TerrianScene extends Scene {
 
         this.program.setUniform4f("tint", [1, 1, 1, 1]);
 
+        // Since we need to send 3 textures to the shader at the same time, we will use 3 texture units.
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures['terrain']);
         this.program.setUniform1i('terrain_texture_sampler', 0);

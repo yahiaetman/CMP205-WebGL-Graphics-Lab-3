@@ -8,7 +8,7 @@ import { vec3, mat4 } from 'gl-matrix';
 import { Vector, Selector } from '../common/dom-utils';
 import { createElement, StatelessProps, StatelessComponent } from 'tsx-create-element';
 
-// In this scene we will draw one rectangle with a texture
+// In this scene we will draw a small scene with multiple textured models and we will explore Anisotropic filtering
 export default class TexturedModelsScene extends Scene {
     program: ShaderProgram;
     camera: Camera;
@@ -16,11 +16,10 @@ export default class TexturedModelsScene extends Scene {
     meshes: {[name: string]: Mesh} = {};
     textures: {[name: string]: WebGLTexture} = {};
 
-    anisotropy_ext: EXT_texture_filter_anisotropic;
-    anisotropic_filtering: number = 0;
+    anisotropy_ext: EXT_texture_filter_anisotropic; // This will hold the anisotropic filtering extension
+    anisotropic_filtering: number = 0; // This will hold the maximum number of samples that the anisotropic filtering is allowed to read. 1 is equivalent to isotropic filtering.
 
     public load(): void {
-        // These shaders take 2 uniform: MVP for 3D transformation and Tint for modifying colors
         this.game.loader.load({
             ["texture.vert"]:{url:'shaders/texture.vert', type:'text'},
             ["texture.frag"]:{url:'shaders/texture.frag', type:'text'},
@@ -40,13 +39,15 @@ export default class TexturedModelsScene extends Scene {
         this.meshes['ground'] = MeshUtils.Plane(this.gl, {min:[0,0], max:[100,100]});
         this.meshes['house'] = MeshUtils.LoadOBJMesh(this.gl, this.game.loader.resources["house-model"]);
         
-
+        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
         
         this.textures['moon'] = this.gl.createTexture();
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures['moon']);
         this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 4);
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.game.loader.resources['moon-texture']);
         this.gl.generateMipmap(this.gl.TEXTURE_2D);
+        // Instead of using a sampler, we send the parameter directly to the texture here.
+        // While we prefer using samplers since it is a clear separation of responsibilities, anisotropic filtering is yet to be supported by sampler and this issue is still not closed on the WebGL github repository.  
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.REPEAT);
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.REPEAT);
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
@@ -81,7 +82,10 @@ export default class TexturedModelsScene extends Scene {
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_LINEAR);
 
+        // Anisotropic filtering is not supported by WebGL by default so we need to ask the context for the extension.
         this.anisotropy_ext = this.gl.getExtension('EXT_texture_filter_anisotropic');
+        // The device does not support anisotropic fltering, the extension will be null. So we need to check before using it.
+        // if it is supported, we will set our default filtering samples to the maximum value allowed by the device.
         if(this.anisotropy_ext) this.anisotropic_filtering = this.gl.getParameter(this.anisotropy_ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
 
         this.camera = new Camera();
@@ -123,6 +127,7 @@ export default class TexturedModelsScene extends Scene {
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures['ground']);
         this.program.setUniform1i('texture_sampler', 0);
+        // If anisotropic filtering is supported, we send the parameter to the texture paramters.
         if(this.anisotropy_ext) this.gl.texParameterf(this.gl.TEXTURE_2D, this.anisotropy_ext.TEXTURE_MAX_ANISOTROPY_EXT, this.anisotropic_filtering);
 
         this.meshes['ground'].draw(this.gl.TRIANGLES);
@@ -136,6 +141,7 @@ export default class TexturedModelsScene extends Scene {
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures['house']);
         this.program.setUniform1i('texture_sampler', 0);
+        // If anisotropic filtering is supported, we send the parameter to the texture paramters.
         if(this.anisotropy_ext) this.gl.texParameterf(this.gl.TEXTURE_2D, this.anisotropy_ext.TEXTURE_MAX_ANISOTROPY_EXT, this.anisotropic_filtering);
 
         this.meshes['house'].draw(this.gl.TRIANGLES);
@@ -151,6 +157,7 @@ export default class TexturedModelsScene extends Scene {
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures['moon']);
         this.program.setUniform1i('texture_sampler', 0);
+        // If anisotropic filtering is supported, we send the parameter to the texture paramters.
         if(this.anisotropy_ext) this.gl.texParameterf(this.gl.TEXTURE_2D, this.anisotropy_ext.TEXTURE_MAX_ANISOTROPY_EXT, this.anisotropic_filtering);
 
         this.meshes['moon'].draw(this.gl.TRIANGLES);

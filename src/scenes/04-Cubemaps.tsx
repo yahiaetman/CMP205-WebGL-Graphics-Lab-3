@@ -8,7 +8,7 @@ import { vec3, mat4 } from 'gl-matrix';
 import { Vector, Selector } from '../common/dom-utils';
 import { createElement, StatelessProps, StatelessComponent } from 'tsx-create-element';
 
-// In this scene we will draw one rectangle with a texture
+// In this scene we will draw one object with a cube map to emulate reflection and refraction. We will also draw a sky box
 export default class CubemapScene extends Scene {
     programs: {[name: string]: ShaderProgram} = {};
     camera: Camera;
@@ -23,16 +23,17 @@ export default class CubemapScene extends Scene {
     refractiveIndex: number = 1.0;
     drawSky: boolean = true;
 
+    // These are the 6 cubemap directions: -x, -y, -z, +x, +y, +z
     static readonly cubemapDirections = ['negx', 'negy', 'negz', 'posx', 'posy', 'posz']
 
     public load(): void {
-        // These shaders take 2 uniform: MVP for 3D transformation and Tint for modifying colors
         this.game.loader.load({
             ["texture-cube.vert"]:{url:'shaders/texture-cube.vert', type:'text'},
             ["texture-cube.frag"]:{url:'shaders/texture-cube.frag', type:'text'},
             ["sky-cube.vert"]:{url:'shaders/sky-cube.vert', type:'text'},
             ["sky-cube.frag"]:{url:'shaders/sky-cube.frag', type:'text'},
             ["suzanne"]:{url:'models/Suzanne/Suzanne.obj', type:'text'},
+            // We will load all the 6 textures to create cubemap
             ...Object.fromEntries(CubemapScene.cubemapDirections.map(dir=>[dir, {url:`images/Vasa/${dir}.jpg`, type:'image'}]))
         });
     }
@@ -54,7 +55,7 @@ export default class CubemapScene extends Scene {
         this.meshes['sphere'] = MeshUtils.Sphere(this.gl);
         this.currentMesh = 'suzanne';
         
-        
+        // These will be our 6 targets for loading the images to the texture
         const target_directions = [
             this.gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
             this.gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
@@ -65,14 +66,17 @@ export default class CubemapScene extends Scene {
         ]
 
         this.textures['environment'] = this.gl.createTexture();
-        this.gl.bindTexture(this.gl.TEXTURE_CUBE_MAP, this.textures['environment']);
+        this.gl.bindTexture(this.gl.TEXTURE_CUBE_MAP, this.textures['environment']); // Here, we will bind the texture to TEXTURE_CUBE_MAP since it will be a cubemap
         this.gl.pixelStorei(this.gl.UNPACK_ALIGNMENT, 4);
+        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, false); // No need for UNPACK_FLIP_Y_WEBGL with cubemaps
         for(let i = 0; i < 6; i++){
+            // The only difference between the call here and with normal 2D textures, is that the target is one of the 6 cubemap faces, instead of TEXTURE_2D
             this.gl.texImage2D(target_directions[i], 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.game.loader.resources[CubemapScene.cubemapDirections[i]]);
         }
-        this.gl.generateMipmap(this.gl.TEXTURE_CUBE_MAP);
+        this.gl.generateMipmap(this.gl.TEXTURE_CUBE_MAP); // Then we generate the mipmaps
 
         this.sampler = this.gl.createSampler();
+        // No need to specify wrapping since we will use directions instead of texture coordinates to sample from the texture.
         this.gl.samplerParameteri(this.sampler, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
         this.gl.samplerParameteri(this.sampler, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR_MIPMAP_LINEAR);
 
@@ -112,6 +116,7 @@ export default class CubemapScene extends Scene {
         mat4.rotateY(M, M, performance.now()/1000);
         
         this.programs['texture'].setUniformMatrix4fv("M", false, M);
+        // We send the model matrix inverse transpose since normals are transformed by the inverse transpose to get correct world-space normals
         this.programs['texture'].setUniformMatrix4fv("M_it", true, mat4.invert(mat4.create(), M));
 
         this.programs['texture'].setUniform4f("tint", [this.tint[0]/255, this.tint[1]/255, this.tint[2]/255, 1]);

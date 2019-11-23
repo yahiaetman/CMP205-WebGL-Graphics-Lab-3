@@ -5,6 +5,9 @@ import TexturedModelsScene from './scenes/02-TexturedModels';
 import TerrianScene from './scenes/03-Terrain';
 import CubemapScene from './scenes/04-Cubemaps';
 import BlendingScene from './scenes/05-Blending';
+import FrameBufferScene from './scenes/06-Framebuffers';
+import MRTScene from './scenes/07-MRT';
+import PostprocessingScene from './scenes/08-Postprocessing';
 
 // First thing we need is to get the canvas on which we draw our scenes
 const canvas: HTMLCanvasElement = document.querySelector("#app");
@@ -18,7 +21,10 @@ const scenes = {
     "Textured Models": TexturedModelsScene,
     "Terrain": TerrianScene,
     "Cubemap": CubemapScene,
-    "Blending": BlendingScene
+    "Blending": BlendingScene,
+    "FrameBuffers": FrameBufferScene,
+    "Multiple Render Targets": MRTScene,
+    "Postprocessing": PostprocessingScene
 };
 const initialScene = "Texture";
 

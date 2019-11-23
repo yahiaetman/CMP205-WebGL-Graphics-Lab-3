@@ -1,6 +1,6 @@
 # WebGL Lab 3
 
-# WARNING: LAB UNDER CONSTRUCTION
+You can try the lab [here](https://yahiaetman.github.io/CMP205-WebGL-Graphics-Lab-3/)
 
 ## Steps to run
 
@@ -42,3 +42,5 @@
 * [Khronos WebGL2 Reference Guide](https://www.khronos.org/files/webgl20-reference-guide.pdf)
 * [Mozilla WebGL2 API Documentation](https://developer.mozilla.org/en-US/docs/Web/API/WebGL2RenderingContext)
 * [Mouse Picking with Ray Casting](http://antongerdelan.net/opengl/raycasting.html) by Anton Gerdelan.
+* [WebGL2 Samples](https://github.com/WebGLSamples/WebGL2Samples)
+* [GLSL Reference](https://www.khronos.org/opengles/sdk/docs/manglsl/docbook4/)

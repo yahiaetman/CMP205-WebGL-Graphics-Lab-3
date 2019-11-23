@@ -19,7 +19,7 @@ interface Renderer {
     transparent: boolean
 }
 
-// In this scene we will draw one rectangle with a texture
+// In this scene we will draw a set of cubes with blending
 export default class BlendingScene extends Scene {
     program: ShaderProgram;
     meshes: {[name: string]: Mesh} = {};
@@ -29,6 +29,7 @@ export default class BlendingScene extends Scene {
     sampler: WebGLSampler;
     renderers: Renderer[];
 
+    // This will contain all the blending options
     blendingEnabled: boolean;
     blendEquation: GLenum;
     srcFactor: GLenum;
@@ -41,7 +42,6 @@ export default class BlendingScene extends Scene {
     alphaToCoverage: boolean = false;
 
     public load(): void {
-        // These shaders take 2 uniform: MVP for 3D transformation and Tint for modifying colors
         this.game.loader.load({
             ["texture.vert"]:{url:'shaders/texture.vert', type:'text'},
             ["texture.frag"]:{url:'shaders/texture.frag', type:'text'},
@@ -61,6 +61,7 @@ export default class BlendingScene extends Scene {
         this.meshes['cube'] = MeshUtils.Cube(this.gl);
         this.meshes['plane'] = MeshUtils.Plane(this.gl, {min:[0,0], max:[20, 20]});
 
+        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
         
         this.textures['color-grid'] = this.gl.createTexture();
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textures['color-grid']);
@@ -165,6 +166,10 @@ export default class BlendingScene extends Scene {
         }
 
         if(this.alphaToCoverage){
+            // This will enable Alpha to Coverage.
+            // Alpha to coverage is a technique that uses the alpha of the fragment to decide whether it will be drawn or not.
+            // Without Multisample Anti-Aliasing, an alpha above 0.5 will allow the pixel to be drawn and an alpha below 0.5 will discard the pixel.
+            // With Multisample Anti-Aliasing, the alpha levels will control how many samples in the frame buffer will be overwritten by the pixel.
             this.gl.enable(this.gl.SAMPLE_ALPHA_TO_COVERAGE);
         } else {
             this.gl.disable(this.gl.SAMPLE_ALPHA_TO_COVERAGE);
@@ -175,6 +180,8 @@ export default class BlendingScene extends Scene {
 
         let renderers = this.renderers.slice();
         if(this.sortRenderers){
+            // Sorting will put opaque objects first followed by transparent objects.
+            // Then opaque objects are sorted from near to far and transparent objects are sorted from far to near.
             renderers.sort((a, b) => {
                 if(!a.transparent && b.transparent){
                     return -1
@@ -196,9 +203,33 @@ export default class BlendingScene extends Scene {
             }
 
             if(renderer.transparent && this.blendingEnabled){
+                // it the object is transparent and we want blending, we enable blending
                 this.gl.enable(this.gl.BLEND);
+                // We give WebGL the blending equation. The options are:
+                // - gl.FUNC_ADD: the equation will be (srcFactor * srcPixel + dstFactor * dstPixel)
+                // - gl.FUNC_SUBTRACT: the equation will be (srcFactor * srcPixel - dstFactor * dstPixel)
+                // - gl.FUNC_REVERSE_SUBTRACT:  the equation will be (dstFactor * dstPixel - srcFactor * srcPixel)
+                // - gl.MIN: the equation will be min(srcFactor * srcPixel, dstFactor * dstPixel)
+                // - gl.MAX: the equation will be max(srcFactor * srcPixel, dstFactor * dstPixel)
                 this.gl.blendEquation(this.blendEquation);
+                // Then, we tell WebGL the source factor and destination factor. The optios for both are:
+                // - gl.ZERO: (0, 0, 0, 0)
+                // - gl.ONE:(1, 1, 1, 1)
+                // - gl.SRC_COLOR: (source.r, source.g, source.b, source.a)
+                // - gl.ONE_MINUS_SRC_COLOR: (1-source.r, 1-source.g, 1-source.b, 1-source.a)
+                // - gl.DST_COLOR: (destination.r, destination.g, destination.b, destination.a)
+                // - gl.ONE_MINUS_DST_COLOR: (1-destination.r, 1-destination.g, 1-destination.b, 1-destination.a)
+                // - gl.SRC_ALPHA: (source.a, source.a, source.a, source.a)
+                // - gl.ONE_MINUS_SRC_ALPHA: (1-source.a, 1-source.a, 1-source.a, 1-source.a)
+                // - gl.DST_ALPHA: (destination.a, destination.a, destination.a, destination.a)
+                // - gl.ONE_MINUS_DST_ALPHA: (1-destination.a, 1-destination.a, 1-destination.a, 1-destination.a)
+                // - gl.CONSTANT_COLOR: (constant.r, constant.g, constant.b, constant.a)
+                // - gl.ONE_MINUS_CONSTANT_COLOR: (1-constant.r, 1-constant.g, 1-constant.b, 1-constant.a)
+                // - gl.CONSTANT_ALPHA: (constant.a, constant.a, constant.a, constant.a)
+                // - gl.ONE_MINUS_CONSTANT_ALPHA: (1-constant.a, 1-constant.a, 1-constant.a, 1-constant.a)
+                // - gl.SRC_ALPHA_SATURATE: (min(source.a, 1-destination.a), min(source.a, 1-destination.a), min(source.a, 1-destination.a), 1)
                 this.gl.blendFunc(this.srcFactor, this.dstFactor);
+                // Here we set the constant color used by gl.CONSTANT_COLOR, gl.ONE_MINUS_CONSTANT_COLOR, gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA
                 this.gl.blendColor(this.constantColor[0], this.constantColor[1], this.constantColor[2], this.constantColor[3]);
             } else {
                 this.gl.disable(this.gl.BLEND);
@@ -217,9 +248,12 @@ export default class BlendingScene extends Scene {
             renderer.mesh.draw(this.gl.TRIANGLES);
         }
 
-        this.gl.colorMask(false, false, false, true);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-        this.gl.colorMask(true, true, true, true);
+        // One caveat of blending on WebGL is that if the frame buffer alpha values are less than 1, the browser will blend the canvas with page background
+        // This feature could be useful, be we don't want it here
+        // So we use the color mask to clear the alpha channel only (set the alpha of all the pixels to 1)
+        this.gl.colorMask(false, false, false, true); // Disable writing to rgb channels only (a is still modifiable)
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT); // clear the color. This will not touch the rgb channels since they are masked, so only a is cleared
+        this.gl.colorMask(true, true, true, true); // Enable writing to all the channels again
         
     }
     
