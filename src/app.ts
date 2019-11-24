@@ -8,6 +8,7 @@ import BlendingScene from './scenes/05-Blending';
 import FrameBufferScene from './scenes/06-Framebuffers';
 import MRTScene from './scenes/07-MRT';
 import PostprocessingScene from './scenes/08-Postprocessing';
+import RealtimeEnvironmentMapScene from './scenes/09-RealtimeEnvMaps';
 
 // First thing we need is to get the canvas on which we draw our scenes
 const canvas: HTMLCanvasElement = document.querySelector("#app");
@@ -24,9 +25,10 @@ const scenes = {
     "Blending": BlendingScene,
     "FrameBuffers": FrameBufferScene,
     "Multiple Render Targets": MRTScene,
-    "Postprocessing": PostprocessingScene
+    "Postprocessing": PostprocessingScene,
+    "Realtime Environment Map": RealtimeEnvironmentMapScene
 };
-const initialScene = "Texture";
+const initialScene = "Realtime Environment Map";
 
 // Then we add those scenes to the game object and ask it to start the initial scene
 game.addScenes(scenes);
